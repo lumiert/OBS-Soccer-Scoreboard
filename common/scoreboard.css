@@ -1,0 +1,11 @@
+body { font-family: Arial, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; }
+.scoreboard { display: flex; justify-content: space-around; font-size: 48px; }
+.team { text-align: center; padding: 20px; }
+.team-name { font-size: 36px; margin-bottom: 10px; }
+.score { font-size: 72px; font-weight: bold; }
+.clock { text-align: center; font-size: 36px; margin-top: 20px; }
+.events { margin-top: 30px; }
+
+/* Color squares for teams */
+.color-squares { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+.color-square { width: 28px; height: 28px; border-radius: 4px; border: 2px solid rgba(255,255,255,0.12); box-shadow: 0 1px 2px rgba(0,0,0,0.4); }
