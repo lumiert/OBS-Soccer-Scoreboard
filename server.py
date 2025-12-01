@@ -364,6 +364,9 @@ scoreboard_html = """
                     <div class="color-square" id="team1-color-b"></div>
                 </div>
                 <div class="score" id="team1-score">0</div>
+        </div>
+            <div class="clock">
+                <div id="clock-display">00:00</div>
             </div>
         <div class="team" id="team2">
             <div class="team-name" id="team2-name">GRE</div>
@@ -373,9 +376,6 @@ scoreboard_html = """
             </div>
             <div class="score" id="team2-score">0</div>
         </div>
-    </div>
-    <div class="clock">
-        <div id="clock-display">00:00</div>
     </div>
     <div class="events" id="events"></div>
     <script>

@@ -1,9 +1,24 @@
-body { font-family: Arial, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; }
-.scoreboard { display: flex; justify-content: space-around; font-size: 48px; }
-.team { text-align: center; padding: 20px; }
+body { font-family: Arial, sans-serif; background: #00000000; color: #fff; margin: 0; padding: 20px; }
+.scoreboard {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-around;
+    font-size: 48px;
+    width: 500px;
+    background: linear-gradient(45deg, #1366e4, #4a4de9);
+}
+
+.team {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+}
+
 .team-name { font-size: 36px; margin-bottom: 10px; }
 .score { font-size: 72px; font-weight: bold; }
-.clock { text-align: center; font-size: 36px; margin-top: 20px; }
+.clock { display: flex; align-items: center; text-align: center; font-size: 36px; }
 .events { margin-top: 30px; }
 
 /* Color squares for teams */
