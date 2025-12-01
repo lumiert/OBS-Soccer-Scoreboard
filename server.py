@@ -357,19 +357,19 @@ scoreboard_html = """
     </head>
 <body>
     <div class="scoreboard">
-        <div class="team" id="team1" style="color: #FF0000;">
+        <div class="team" id="team1">
                 <div class="team-name" id="team1-name">INT</div>
                 <div class="color-squares">
-                    <div class="color-square" id="team1-color-a" style="background:#FF0000"></div>
-                    <div class="color-square" id="team1-color-b" style="background:#FFFFFF"></div>
+                    <div class="color-square" id="team1-color-a"></div>
+                    <div class="color-square" id="team1-color-b"></div>
                 </div>
                 <div class="score" id="team1-score">0</div>
             </div>
-        <div class="team" id="team2" style="color: #006EFF;">
+        <div class="team" id="team2">
             <div class="team-name" id="team2-name">GRE</div>
             <div class="color-squares">
-                <div class="color-square" id="team2-color-a" style="background:#006EFF"></div>
-                <div class="color-square" id="team2-color-b" style="background:#FFFFFF"></div>
+                <div class="color-square" id="team2-color-a"></div>
+                <div class="color-square" id="team2-color-b"></div>
             </div>
             <div class="score" id="team2-score">0</div>
         </div>
