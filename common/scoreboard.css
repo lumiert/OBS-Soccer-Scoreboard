@@ -2,10 +2,10 @@ body { font-family: Arial, sans-serif; background: #00000000; color: #fff; margi
 .scoreboard {
     display: inline-flex;
     align-items: center;
-    justify-content: space-around;
+    justify-content: center;
     font-size: 48px;
-    width: 500px;
-    background: linear-gradient(45deg, #1366e4, #4a4de9);
+    width: 600px;
+    background: #272727;
 }
 
 .team {
@@ -17,10 +17,15 @@ body { font-family: Arial, sans-serif; background: #00000000; color: #fff; margi
 }
 
 .team-name { font-size: 36px; margin-bottom: 10px; }
-.score { font-size: 72px; font-weight: bold; }
+.score { display: flex; align-items: center; font-size: 48px; font-weight: bold; }
 .clock { display: flex; align-items: center; text-align: center; font-size: 36px; }
 .events { margin-top: 30px; }
 
 /* Color squares for teams */
-.color-squares { display: flex; justify-content: center; margin-top: 8px; }
+.color-squares { 
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    margin-top: 50px;
+}
 .color-square { width: 28px; height: 8px; }
