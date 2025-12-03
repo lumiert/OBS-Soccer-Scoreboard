@@ -1,4 +1,3 @@
-body { font-family: Arial, sans-serif; background: #00000000; color: #fff; margin: 0; padding: 20px; }
 .scoreboard {
     display: inline-flex;
     align-items: center;
@@ -21,7 +20,10 @@ body { font-family: Arial, sans-serif; background: #00000000; color: #fff; margi
 .clock { display: flex; align-items: center; text-align: center; font-size: 36px; }
 .events { margin-top: 30px; }
 
-/* Color squares for teams */
+.color-inputs {
+    display: flex;
+}
+
 .color-squares { 
     position: absolute;
     display: flex;

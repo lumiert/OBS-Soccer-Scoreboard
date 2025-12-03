@@ -1,0 +1,55 @@
+body {
+    background: #2c2e38;
+    color: white;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+h1 {
+    text-align: center;
+}
+
+input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 100%;
+  cursor: pointer;
+  background: none;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 100%;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.section {
+    background: rgb(27, 27, 27);
+    padding: 20px;
+    margin: 10px 0;
+    border-radius: 8px;
+}
+
+.flex-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+}
+
+.team-section {
+    display: flex;
+
+}
+
+.team { flex: 1; }

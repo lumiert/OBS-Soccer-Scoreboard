@@ -5,6 +5,10 @@ import threading
 from datetime import datetime
 from aiohttp import web
 import os
+try:
+    import lucide
+except Exception:
+    lucide = None
 
 SCOREBOARD_PORT = 6003
 WEBSOCKET_PORT = 6000
@@ -424,7 +428,8 @@ scoreboard_html = """
 <html>
     <head>
     <title>Scoreboard</title>
-    <link rel="stylesheet" href="/common/scoreboard.css">
+    <link rel="stylesheet" href="/common/css/base.css">
+    <link rel="stylesheet" href="/common/css/scoreboard.css">
     </head>
 <body>
     <div class="scoreboard">
@@ -474,91 +479,85 @@ scoreboard_html = """
 
 remote_html = """
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-    <title>Remote Control</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        h1 { text-align: center; }
-        .section { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .team-section { display: flex; gap: 20px; }
-        .team { flex: 1; }
-        label { display: block; margin: 10px 0 5px 0; font-weight: bold; }
-        input, select { width: 100%; padding: 8px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; margin: 5px 0; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        .button-group { display: flex; gap: 10px; }
-        .button-group button { flex: 1; }
-    </style>
+    <link rel="stylesheet" href="/common/css/base.css">
+    <link rel="stylesheet" href="/common/css/remote.css">
+    <meta charset="utf-8">
+    <title>Controle Remoto</title>
 </head>
 <body>
     <div class="container">
-        <h1>Scoreboard Remote Control</h1>
+        <h1>Controle Remoto do Placar</h1>
         
         <div class="section team-section">
             <div class="team">
-                <h2>Team 1</h2>
-                <label>Name (3 letters):</label>
-                <input type="text" id="team1-name" maxlength="3" value="INT">
-                <button onclick="setName(1)">Set Name</button>
-                
-                <label>Score:</label>
-                <input type="number" id="team1-score" value="0">
-                <button onclick="setScore(1)">Set Score</button>
-                
-                <label>Primary Color:</label>
-                <input type="color" id="team1-color1" value="#FF0000">
-                <label>Secondary Color:</label>
-                <input type="color" id="team1-color2" value="#FFFFFF">
-                <button onclick="setColors(1)">Set Colors</button>
-                
-                <button onclick="addCard(1, 'yellow')" style="background: #FFD700; color: black;">Yellow Card</button>
-                <button onclick="addCard(1, 'red')" style="background: #FF0000;">Red Card</button>
+                <h2>Time 1</h2>
+                <div class="flex-row">
+                    <label>Nome (3 letras):</label>
+                    <input type="text" id="team1-name" maxlength="3" value="INT">
+
+                    <label>Placar:</label>
+                    <input type="number" id="team1-score" value="0">
+                </div>
+                <div class="flex-row">
+                    <label>Cor primária:</label>
+                    <input type="color" id="team1-color1" value="#FF0000">
+
+                    <label>Cor secundária:</label>
+                    <input type="color" id="team1-color2" value="#FFFFFF">
+                </div>
+                <button onclick="saveTeam(1)"><img class="icon" src="/common/icons/save.svg" alt=""> Salvar</button>
+
+                <button onclick="addCard(1, 'yellow')" style="background: #FFD700; color: black;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Amarelo</button>
+                <button onclick="addCard(1, 'red')" style="background: #FF0000;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Vermelho</button>
             </div>
             
             <div class="team">
-                <h2>Team 2</h2>
-                <label>Name (3 letters):</label>
-                <input type="text" id="team2-name" maxlength="3" value="GRE">
-                <button onclick="setName(2)">Set Name</button>
+                <h2>Time 2</h2>
                 
-                <label>Score:</label>
-                <input type="number" id="team2-score" value="0">
-                <button onclick="setScore(2)">Set Score</button>
-                
-                <label>Primary Color:</label>
-                <input type="color" id="team2-color1" value="#006EFF">
-                <label>Secondary Color:</label>
-                <input type="color" id="team2-color2" value="#FFFFFF">
-                <button onclick="setColors(2)">Set Colors</button>
-                
-                <button onclick="addCard(2, 'yellow')" style="background: #FFD700; color: black;">Yellow Card</button>
-                <button onclick="addCard(2, 'red')" style="background: #FF0000;">Red Card</button>
+                <div class="flex-row">
+                    <label>Nome (3 letras):</label>
+                    <input type="text" id="team2-name" maxlength="3" value="GRE">
+
+                    <label>Placar:</label>
+                    <input type="number" id="team2-score" value="0">
+                </div>
+                <div class="flex-row">
+                    <label>Cor primária:</label>
+                    <input type="color" id="team2-color1" value="#006EFF">
+                    <label>Cor secundária:</label>
+                    <input type="color" id="team2-color2" value="#FFFFFF">
+                </div>
+                <button onclick="saveTeam(2)"><img class="icon" src="/common/icons/save.svg" alt=""> Salvar</button>
+
+                <button onclick="addCard(2, 'yellow')" style="background: #FFD700; color: black;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Amarelo</button>
+                <button onclick="addCard(2, 'red')" style="background: #FF0000;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Vermelho</button>
             </div>
         </div>
         
         <div class="section">
-            <h2>Clock Controls</h2>
+            <h2>Controles do Relógio</h2>
             <div class="button-group">
-                <button onclick="startClock()">Start</button>
-                <button onclick="stopClock()">Stop</button>
-                <button onclick="resetClock()">Reset</button>
+                <button onclick="startClock()"><img class="icon" src="/common/icons/play.svg" alt=""> Iniciar</button>
+                <button onclick="stopClock()"><img class="icon" src="/common/icons/pause.svg" alt=""> Pausar</button>
+                <button onclick="resetClock()"><img class="icon" src="/common/icons/refresh.svg" alt=""> Resetar</button>
             </div>
-            <label>Add/Subtract Minutes:</label>
+            <label>Adicionar/Subtrair Minutos:</label>
             <div class="button-group">
                 <input type="number" id="minutes" value="1" style="flex: 1;">
-                <button onclick="addTime()">Add Time</button>
+                <button onclick="addTime()">Adicionar Tempo</button>
             </div>
         </div>
         
         <div class="section">
-            <h2>Round</h2>
-            <label>Select Round:</label>
-            <select id="round" onchange="setRound()">
-                <option value="1">Round 1</option>
-                <option value="2">Round 2</option>
+            <h2>Período</h2>
+            <label>Selecionar Tempo:</label>
+            <select id="round">
+                <option value="1">1º Tempo</option>
+                <option value="2">2º Tempo</option>
             </select>
+            <button onclick="saveRound()"><img class="icon" src="/common/icons/save.svg" alt=""> Salvar</button>
         </div>
     </div>
     
@@ -572,31 +571,34 @@ remote_html = """
                 });
                 const result = await response.json();
                 console.log(result);
+                return result;
             } catch (e) {
                 console.error('Error:', e);
+                return { status: 'error', error: String(e) };
             }
         }
-        
-        function setName(team) {
+
+        // Salva nome, placar e cores com um único botão
+        function saveTeam(team) {
             const name = document.getElementById(`team${team}-name`).value.toUpperCase();
-            sendCommand({ action: 'set_name', team, name });
-        }
-        
-        function setScore(team) {
-            const score = parseInt(document.getElementById(`team${team}-score`).value);
-            sendCommand({ action: 'set_score', team, score });
-        }
-        
-        function setColors(team) {
+            const score = parseInt(document.getElementById(`team${team}-score`).value) || 0;
             const color1 = document.getElementById(`team${team}-color1`).value;
             const color2 = document.getElementById(`team${team}-color2`).value;
-            sendCommand({ action: 'set_colors', team, colors: [color1, color2] });
+            (async () => {
+                let r = await sendCommand({ action: 'set_name', team, name });
+                if (r.status !== 'ok') console.warn('set_name failed', r);
+                r = await sendCommand({ action: 'set_score', team, score });
+                if (r.status !== 'ok') console.warn('set_score failed', r);
+                r = await sendCommand({ action: 'set_colors', team, colors: [color1, color2] });
+                if (r.status !== 'ok') console.warn('set_colors failed', r);
+                try { const st = await fetch('/common/state.json').then(r => r.json()); applyStateToForm(st); } catch(e){}
+            })();
         }
-        
+
         function addCard(team, card) {
             sendCommand({ action: 'card', team, card });
         }
-        
+
         function startClock() { sendCommand({ action: 'start_clock' }); }
         function stopClock() { sendCommand({ action: 'stop_clock' }); }
         function resetClock() { sendCommand({ action: 'reset_clock' }); }
@@ -604,14 +606,50 @@ remote_html = """
             const minutes = parseFloat(document.getElementById('minutes').value);
             sendCommand({ action: 'add_time', minutes });
         }
-        function setRound() {
+        function saveRound() {
             const round = parseInt(document.getElementById('round').value);
             sendCommand({ action: 'set_round', round });
         }
+
+        function applyStateToForm(st) {
+            try {
+                const teams = st.teams || st;
+                const t1 = teams[1] || teams['1'];
+                const t2 = teams[2] || teams['2'];
+                if (t1) {
+                    document.getElementById('team1-name').value = t1.name || '';
+                    document.getElementById('team1-score').value = t1.score || 0;
+                    if (t1.colors && t1.colors.length>=2) {
+                        document.getElementById('team1-color1').value = t1.colors[0];
+                        document.getElementById('team1-color2').value = t1.colors[1];
+                    }
+                }
+                if (t2) {
+                    document.getElementById('team2-name').value = t2.name || '';
+                    document.getElementById('team2-score').value = t2.score || 0;
+                    if (t2.colors && t2.colors.length>=2) {
+                        document.getElementById('team2-color1').value = t2.colors[0];
+                        document.getElementById('team2-color2').value = t2.colors[1];
+                    }
+                }
+                if (st.round) {
+                    document.getElementById('round').value = st.round;
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const st = await fetch('/common/state.json').then(r => r.json());
+                applyStateToForm(st);
+            } catch (e) { console.warn('failed to load state.json', e); }
+        });
     </script>
 </body>
 </html>
 """
+
+        # Using local SVG sprite (`/common/icons.svg`) instead of python-lucide server-side rendering
 
 def _scoreboard_html():
     return scoreboard_html
