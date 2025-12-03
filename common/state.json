@@ -1,1 +1,22 @@
-{"scoreboard_port": 6003, "controller_port": 6001, "remote_port": 80, "timestamp": "2025-12-02T11:07:16.617098Z"}
+{
+  "teams": {
+    "1": {
+      "name": "JUV",
+      "score": 0,
+      "colors": [
+        "#53FF00",
+        "#FFFFFF"
+      ]
+    },
+    "2": {
+      "name": "GRE",
+      "score": 0,
+      "colors": [
+        "#006EFF",
+        "#FFFFFF"
+      ]
+    }
+  },
+  "events": [],
+  "round": 1
+}

@@ -15,130 +15,200 @@ HEX_COLOR_RE = re.compile(r"^#([0-9A-Fa-f]{6})$")
 def now_iso():
     return datetime.utcnow().isoformat() + "Z"
 
-class State:
-    def __init__(self):
-        # initial values
-        self.team = {
-            1: {"name": "INT", "score": 0, "colors": ["#FF0000", "#FFFFFF"]},
-            2: {"name": "GRE", "score": 0, "colors": ["#006EFF", "#FFFFFF"]},
+### Persistent state backed by `common/state.json`
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+STATE_FILE = os.path.join(SCRIPT_DIR, 'common', 'state.json')
+
+# Clock state (in-memory only; not persisted)
+clock_lock = asyncio.Lock()
+clock_running = False
+clock_elapsed = 0.0
+clock_start_time = None
+
+# File lock for reading/writing persistent state
+file_lock = asyncio.Lock()
+
+def _normalize_persistent(p):
+    # Ensure teams have integer keys and defaults exist
+    teams = p.get("teams", {})
+    normalized = {}
+    for k, v in teams.items():
+        try:
+            ik = int(k)
+        except Exception:
+            continue
+        normalized[ik] = v
+    # Provide defaults if missing
+    if 1 not in normalized:
+        normalized[1] = {"name": "INT", "score": 0, "colors": ["#FF0000", "#FFFFFF"]}
+    if 2 not in normalized:
+        normalized[2] = {"name": "GRE", "score": 0, "colors": ["#006EFF", "#FFFFFF"]}
+    return {
+        "teams": normalized,
+        "events": p.get("events", []) or [],
+        "round": p.get("round", 1),
+    }
+
+async def _read_persistent_state():
+    loop = asyncio.get_running_loop()
+    def _read():
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return None
+    raw = await loop.run_in_executor(None, _read)
+    if raw is None:
+        # create default
+        default = {"teams": {"1": {"name": "INT", "score": 0, "colors": ["#FF0000", "#FFFFFF"]},
+                             "2": {"name": "GRE", "score": 0, "colors": ["#006EFF", "#FFFFFF"]}},
+                   "events": [], "round": 1}
+        await _write_persistent_state(default)
+        raw = default
+    p = _normalize_persistent(raw)
+    return p
+
+async def _write_persistent_state(persist_dict):
+    # Write atomically to STATE_FILE
+    loop = asyncio.get_running_loop()
+    def _write():
+        tmp = STATE_FILE + ".tmp"
+        # Convert team keys to strings for JSON
+        out = {
+            "teams": {str(k): v for k, v in persist_dict.get("teams", {}).items()},
+            "events": persist_dict.get("events", []),
+            "round": persist_dict.get("round", 1),
         }
-        self.events = []  # list of recent events (cards etc)
-        # Clock / chronometer state (up-counter)
-        self.clock_running = False
-        self.clock_elapsed = 0.0  # accumulated seconds when not running (float)
-        self.clock_start_time = None  # loop.time() when started, or None
-        # Round state (1 or 2)
-        self.round = 1
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, indent=2)
+        try:
+            os.replace(tmp, STATE_FILE)
+        except Exception:
+            # fallback: write directly
+            with open(STATE_FILE, "w", encoding="utf-8") as f:
+                json.dump(out, f, ensure_ascii=False, indent=2)
+    await loop.run_in_executor(None, _write)
 
-        self._lock = asyncio.Lock()
+async def get_state():
+    async with file_lock:
+        p = await _read_persistent_state()
+    async with clock_lock:
+        elapsed = clock_elapsed
+        if clock_running and clock_start_time is not None:
+            elapsed += (asyncio.get_running_loop().time() - clock_start_time)
+        return {
+            "timestamp": now_iso(),
+            "teams": {
+                1: dict(p["teams"][1]),
+                2: dict(p["teams"][2]),
+            },
+            "events": list(p.get("events", [])),
+            "clock": {
+                "running": clock_running,
+                "elapsed_seconds": int(elapsed),
+            },
+            "round": p.get("round", 1),
+        }
 
-    async def get_state(self):
-        async with self._lock:
-            # compute current elapsed
-            elapsed = self.clock_elapsed
-            if self.clock_running and self.clock_start_time is not None:
-                elapsed += (asyncio.get_running_loop().time() - self.clock_start_time)
-            return {
-                "timestamp": now_iso(),
-                "teams": {
-                    1: dict(self.team[1]),
-                    2: dict(self.team[2]),
-                },
-                "events": list(self.events),
-                "clock": {
-                    "running": self.clock_running,
-                    "elapsed_seconds": int(elapsed),
-                },
-                "round": self.round,
-            }
+# Mutating helpers (persist changes except clock)
+async def set_score(team, score):
+    if team not in (1, 2):
+        return False, "invalid team"
+    if not isinstance(score, int):
+        return False, "score must be integer"
+    if score <= 0:
+        return False, "score must be higher than zero"
+    async with file_lock:
+        p = await _read_persistent_state()
+        p["teams"][team]["score"] = score
+        await _write_persistent_state(p)
+    return True, "score updated"
 
-    # Mutating helpers return (ok:bool, message:str)
-    async def set_score(self, team, score):
-        if team not in (1, 2):
-            return False, "invalid team"
-        if not isinstance(score, int):
-            return False, "score must be integer"
-        if score <= 0:
-            return False, "score must be higher than zero"
-        async with self._lock:
-            self.team[team]["score"] = score
-        return True, "score updated"
+async def set_name(team, name):
+    if team not in (1, 2):
+        return False, "invalid team"
+    if not isinstance(name, str):
+        return False, "name must be string"
+    name = name.strip().upper()
+    if not re.fullmatch(r"[A-Z]{3}", name):
+        return False, "name must be 3 letters A-Z"
+    async with file_lock:
+        p = await _read_persistent_state()
+        p["teams"][team]["name"] = name
+        await _write_persistent_state(p)
+    return True, "name updated"
 
-    async def set_name(self, team, name):
-        if team not in (1, 2):
-            return False, "invalid team"
-        if not isinstance(name, str):
-            return False, "name must be string"
-        name = name.strip().upper()
-        if not re.fullmatch(r"[A-Z]{3}", name):
-            return False, "name must be 3 letters A-Z"
-        async with self._lock:
-            self.team[team]["name"] = name
-        return True, "name updated"
+async def set_colors(team, colors):
+    if team not in (1, 2):
+        return False, "invalid team"
+    if not isinstance(colors, (list, tuple)) or len(colors) != 2:
+        return False, "colors must be a list of 2 hex strings"
+    for c in colors:
+        if not isinstance(c, str) or not HEX_COLOR_RE.fullmatch(c):
+            return False, f"invalid color {c}"
+    async with file_lock:
+        p = await _read_persistent_state()
+        p["teams"][team]["colors"] = [colors[0].upper(), colors[1].upper()]
+        await _write_persistent_state(p)
+    return True, "colors updated"
 
-    async def set_colors(self, team, colors):
-        if team not in (1, 2):
-            return False, "invalid team"
-        if not isinstance(colors, (list, tuple)) or len(colors) != 2:
-            return False, "colors must be a list of 2 hex strings"
-        for c in colors:
-            if not isinstance(c, str) or not HEX_COLOR_RE.fullmatch(c):
-                return False, f"invalid color {c}"
-        async with self._lock:
-            self.team[team]["colors"] = [colors[0].upper(), colors[1].upper()]
-        return True, "colors updated"
+async def add_card(team, card):
+    if team not in (1, 2):
+        return False, "invalid team"
+    if card not in ("yellow", "red"):
+        return False, "card must be 'yellow' or 'red'"
+    ev = {"type": "card", "team": team, "card": card, "when": now_iso()}
+    async with file_lock:
+        p = await _read_persistent_state()
+        p["events"].insert(0, ev)
+        p["events"] = p["events"][:20]
+        await _write_persistent_state(p)
+    return True, "card recorded"
 
-    async def add_card(self, team, card):
-        if team not in (1, 2):
-            return False, "invalid team"
-        if card not in ("yellow", "red"):
-            return False, "card must be 'yellow' or 'red'"
-        ev = {"type": "card", "team": team, "card": card, "when": now_iso()}
-        async with self._lock:
-            self.events.insert(0, ev)
-            # keep last 20 events
-            self.events = self.events[:20]
-        return True, "card recorded"
+# Clock controls (in-memory)
+async def start_clock():
+    global clock_running, clock_start_time
+    async with clock_lock:
+        if not clock_running:
+            clock_start_time = asyncio.get_running_loop().time()
+            clock_running = True
+    return True, "clock started"
 
-    # Clock controls
-    async def start_clock(self):
-        async with self._lock:
-            if not self.clock_running:
-                self.clock_start_time = asyncio.get_running_loop().time()
-                self.clock_running = True
-        return True, "clock started"
+async def stop_clock():
+    global clock_running, clock_start_time, clock_elapsed
+    async with clock_lock:
+        if clock_running and clock_start_time is not None:
+            now = asyncio.get_running_loop().time()
+            clock_elapsed += (now - clock_start_time)
+            clock_start_time = None
+            clock_running = False
+    return True, "clock stopped"
 
-    async def stop_clock(self):
-        async with self._lock:
-            if self.clock_running and self.clock_start_time is not None:
-                now = asyncio.get_running_loop().time()
-                self.clock_elapsed += (now - self.clock_start_time)
-                self.clock_start_time = None
-                self.clock_running = False
-        return True, "clock stopped"
+async def reset_clock():
+    global clock_running, clock_elapsed, clock_start_time
+    async with clock_lock:
+        clock_running = False
+        clock_elapsed = 0.0
+        clock_start_time = None
+    return True, "clock reset"
 
-    async def reset_clock(self):
-        async with self._lock:
-            self.clock_running = False
-            self.clock_elapsed = 0.0
-            self.clock_start_time = None
-        return True, "clock reset"
+async def add_time(minutes):
+    global clock_elapsed
+    if not (isinstance(minutes, int) or isinstance(minutes, float)):
+        return False, "minutes must be a number"
+    seconds = int(minutes * 60)
+    async with clock_lock:
+        clock_elapsed += seconds
+    return True, f"added {minutes} minute(s)"
 
-    async def add_time(self, minutes):
-        if not (isinstance(minutes, int) or isinstance(minutes, float)):
-            return False, "minutes must be a number"
-        seconds = int(minutes * 60)
-        async with self._lock:
-            # Adding time affects accumulated seconds; works whether running or not
-            self.clock_elapsed += seconds
-        return True, f"added {minutes} minute(s)"
-
-    async def set_round(self, round_num):
-        if round_num not in (1, 2):
-            return False, "round must be 1 or 2"
-        async with self._lock:
-            self.round = round_num
-        return True, f"round set to {round_num}"
+async def set_round(round_num):
+    if round_num not in (1, 2):
+        return False, "round must be 1 or 2"
+    async with file_lock:
+        p = await _read_persistent_state()
+        p["round"] = round_num
+        await _write_persistent_state(p)
+    return True, f"round set to {round_num}"
 
 
 class Broadcaster:
@@ -196,7 +266,6 @@ class Broadcaster:
         async with self._lock:
             self.ws_clients.discard(ws)
 
-state = State()
 broadcaster = Broadcaster()
 
 async def handle_scoreboard(reader, writer):
@@ -204,7 +273,7 @@ async def handle_scoreboard(reader, writer):
     addr = writer.get_extra_info("peername")
     await broadcaster.register(writer)
     try:
-        s = await state.get_state()
+        s = await get_state()
         await broadcaster.broadcast(s)  # send to all including this new client
         # Keep connection open until client disconnects; no reads necessary
         while True:
@@ -230,7 +299,7 @@ async def handle_ws(request):
 
     await broadcaster.register_ws(ws)
     try:
-        s = await state.get_state()
+        s = await get_state()
         await ws.send_str(json.dumps(s, separators=(",", ":"), ensure_ascii=False))
         async for msg in ws:
             # ignore incoming messages; keep connection open until client disconnects
@@ -268,7 +337,7 @@ async def handle_controller(reader, writer):
             resp = await process_command(cmd)
             # After processing, broadcast full state to scoreboard clients
             if resp.get("status") == "ok":
-                s = await state.get_state()
+                s = await get_state()
                 await broadcaster.broadcast(s)
             writer.write((json.dumps(resp, separators=(",", ":"), ensure_ascii=False) + "\n").encode())
             await writer.drain()
@@ -288,47 +357,47 @@ async def process_command(cmd):
     if action == "set_score":
         team = cmd.get("team")
         score = cmd.get("score")
-        ok, msg = await state.set_score(team, score)
+        ok, msg = await set_score(team, score)
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
     elif action == "set_name":
         team = cmd.get("team")
         name = cmd.get("name")
-        ok, msg = await state.set_name(team, name)
+        ok, msg = await set_name(team, name)
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
     elif action == "set_colors":
         team = cmd.get("team")
         colors = cmd.get("colors")
-        ok, msg = await state.set_colors(team, colors)
+        ok, msg = await set_colors(team, colors)
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
     elif action == "card":
         team = cmd.get("team")
         card = cmd.get("card")
-        ok, msg = await state.add_card(team, card)
+        ok, msg = await add_card(team, card)
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
     elif action == "get_state":
-        st = await state.get_state()
+        st = await get_state()
         return {"status":"ok","state":st}
 
     # Clock actions
     elif action == "start_clock":
-        ok, msg = await state.start_clock()
+        ok, msg = await start_clock()
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
     elif action == "stop_clock":
-        ok, msg = await state.stop_clock()
+        ok, msg = await stop_clock()
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
     elif action == "reset_clock":
-        ok, msg = await state.reset_clock()
+        ok, msg = await reset_clock()
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
     elif action == "add_time":
         # minutes: positive or negative integer/float (for syncing)
         minutes = cmd.get("minutes")
-        ok, msg = await state.add_time(minutes)
+        ok, msg = await add_time(minutes)
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
 
     # Round action
     elif action == "set_round":
         round_num = cmd.get("round")
-        ok, msg = await state.set_round(round_num)
+        ok, msg = await set_round(round_num)
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
     else:
         return {"status":"error","error":"unknown action"}
@@ -339,8 +408,10 @@ async def clock_ticker():
         while True:
             await asyncio.sleep(1)
             # Only broadcast when clock is running (to avoid spam)
-            if state.clock_running:
-                s = await state.get_state()
+            async with clock_lock:
+                running = clock_running
+            if running:
+                s = await get_state()
                 await broadcaster.broadcast(s)
     except asyncio.CancelledError:
         return
@@ -573,7 +644,7 @@ async def start_servers():
             return web.json_response({'status': 'error', 'error': f'invalid json: {e}'})
         resp = await process_command(cmd)
         if resp.get('status') == 'ok':
-            s = await state.get_state()
+            s = await get_state()
             await broadcaster.broadcast(s)
         return web.json_response(resp)
 
@@ -613,16 +684,16 @@ scoreboard_endpoint = f'http://localhost:{SCOREBOARD_PORT}'
 controller_endpoint = f'http://localhost:{CONTROLLER_PORT}'
 remote_endpoint = f'http://localhost:{REMOTE_PORT}'
 
-# Save the current state to a JSON file
-state_data = {
+ # Save the current server info to a JSON file (not the persistent UI state)
+server_info = {
     'scoreboard_port': SCOREBOARD_PORT,
     'controller_port': CONTROLLER_PORT,
     'remote_port': REMOTE_PORT,
     'timestamp': now_iso()
 }
-
-with open('./common/state.json', 'w') as state_file:
-    json.dump(state_data, state_file)
+server_info_path = os.path.join(SCRIPT_DIR, 'common', 'server_info.json')
+with open(server_info_path, 'w', encoding='utf-8') as info_file:
+    json.dump(server_info, info_file, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
     try:
