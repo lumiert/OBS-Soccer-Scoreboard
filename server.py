@@ -1,7 +1,6 @@
 import asyncio
 import json
 import re
-import threading
 from datetime import datetime
 from aiohttp import web
 import os
@@ -120,7 +119,7 @@ async def set_score(team, score):
         return False, "invalid team"
     if not isinstance(score, int):
         return False, "score must be integer"
-    if score <= 0:
+    if score < 0:
         return False, "score must be higher than zero"
     async with file_lock:
         p = await _read_persistent_state()
@@ -434,23 +433,28 @@ scoreboard_html = """
 <body>
     <div class="scoreboard">
         <div class="team" id="team1">
-                <div class="team-name" id="team1-name">INT</div>
                 <div class="color-squares">
                     <div class="color-square" id="team1-color-a"></div>
                     <div class="color-square" id="team1-color-b"></div>
                 </div>
+                <div class="team-name" id="team1-name">INT</div>
                 <div class="score" id="team1-score">0</div>
         </div>
-            <div class="clock">
-                <div id="clock-display">00:00</div>
-            </div>
         <div class="team" id="team2">
-            <div class="team-name" id="team2-name">GRE</div>
             <div class="color-squares">
                 <div class="color-square" id="team2-color-a"></div>
                 <div class="color-square" id="team2-color-b"></div>
             </div>
+            <div class="team-name" id="team2-name">GRE</div>
             <div class="score" id="team2-score">0</div>
+        </div>
+        <div class="third">
+            <div class="round">
+                <div id="round-display"></div>
+            </div>
+            <div class="clock">
+                <div id="clock-display"></div>
+            </div>
         </div>
     </div>
     <div class="events" id="events"></div>
@@ -471,6 +475,8 @@ scoreboard_html = """
             const secs = elapsed % 60;
             document.getElementById('clock-display').textContent = 
                 String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+            const roundNum = state.round || 1;
+            document.getElementById('round-display').textContent = `${roundNum}º`;
         };
     </script>
 </body>
@@ -495,7 +501,7 @@ remote_html = """
                 <h2>Time 1</h2>
                 <div class="flex-row">
                     <label>Nome (3 letras):</label>
-                    <input type="text" id="team1-name" maxlength="3" value="INT">
+                    <input type="text" id="team1-name" maxlength="3" value="">
 
                     <label>Placar:</label>
                     <input type="number" id="team1-score" value="0">
@@ -518,7 +524,7 @@ remote_html = """
                 
                 <div class="flex-row">
                     <label>Nome (3 letras):</label>
-                    <input type="text" id="team2-name" maxlength="3" value="GRE">
+                    <input type="text" id="team2-name" maxlength="3" value="">
 
                     <label>Placar:</label>
                     <input type="number" id="team2-score" value="0">
@@ -737,4 +743,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(start_servers())
     except KeyboardInterrupt:
-        print("Shutting down")
+        print("Desligando...")

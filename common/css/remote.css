@@ -48,8 +48,11 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 }
 
 .team-section {
-    display: flex;
+  display: flex;
+  justify-content: space-evenly;
 
 }
 
-.team { flex: 1; }
+.team { 
+   
+}
