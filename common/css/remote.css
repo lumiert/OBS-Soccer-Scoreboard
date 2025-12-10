@@ -1,15 +1,17 @@
 body {
-    background: #2c2e38;
-    color: white;
+  background: #2c2e38;
+  color: white;
+  font-family: Arial;
 }
 
 .container {
-    max-width: 900px;
-    margin: 0 auto;
+  min-width: 300px;
+  max-width: 1200px;
+  margin: 24px;
 }
 
 h1 {
-    text-align: center;
+  text-align: center;
 }
 
 input[type="color"] {
@@ -34,25 +36,73 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 }
 
 .section {
-    background: rgb(27, 27, 27);
-    padding: 20px;
-    margin: 10px 0;
-    border-radius: 8px;
+  background: rgb(27, 27, 27);
+  padding: 20px;
+  margin: 10px 0;
+  border-radius: 8px;
 }
 
 .flex-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .team-section {
   display: flex;
   justify-content: space-evenly;
-
 }
 
-.team { 
-   
+/* Desktop: show three columns (Time1, Time2, Clock) */
+@media (min-width: 721px) {
+  .grid-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .grid-top .team, .grid-top .clock-panel {
+    background: rgb(27, 27, 27);
+    padding: 18px;
+    border-radius: 8px;
+  }
+  .clock-panel .button-group { gap: 8px; }
+}
+
+/* Responsive: stack team controls on small screens */
+@media (max-width: 720px) {
+  .team-section {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .flex-row {
+    flex-direction: row; /* keep controls on same line */
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .container { margin: 10px; }
+  .section { padding: 10px; }
+  /* make only buttons inside button-group full width on small screens
+     keep inline buttons (like +/-) auto-sized so they stay next to inputs */
+  .button-group button { width: 100%; }
+  /* only make text inputs and selects full-width; keep number and color inputs inline */
+  /* text inputs inside .flex-row should flex to fill remaining space (e.g. team name) */
+  .flex-row > input[type="text"] { flex: 1 1 auto; min-width: 0; box-sizing: border-box; }
+  /* keep number and color inputs compact */
+  .flex-row > input[type="number"] { width: 70px; }
+  .flex-row > input[type="color"] { width: 28px; height: 28px; }
+  /* inline buttons (like +/-) stay auto-sized */
+  .flex-row > button { width: auto; }
+  /* Reduce typography for small screens (further reduced as requested) */
+  body { font-size: 7px; }
+  h1 { font-size: 12px; }
+  label, input, select, button { font-size: 11px; }
+  .section { font-size: 10px; }
 }

@@ -494,9 +494,7 @@ remote_html = """
 </head>
 <body>
     <div class="container">
-        <h1>Controle Remoto do Placar</h1>
-        
-        <div class="section team-section">
+        <div class="section grid-top">
             <div class="team">
                 <h2>Time 1</h2>
                 <div class="flex-row">
@@ -504,7 +502,9 @@ remote_html = """
                     <input type="text" id="team1-name" maxlength="3" value="">
 
                     <label>Placar:</label>
-                    <input type="number" id="team1-score" value="0">
+                    <input type="number" id="team1-score" value="0" style="width:70px;">
+                    <button onclick="changeScore(1,-1)" title="Diminuir" style="margin-left:6px;"><img class="icon" src="/common/icons/minus.svg" alt="-"></button>
+                    <button onclick="changeScore(1,1)" title="Aumentar" style="margin-left:4px;"><img class="icon" src="/common/icons/plus.svg" alt="+"></button>
                 </div>
                 <div class="flex-row">
                     <label>Cor primária:</label>
@@ -513,21 +513,22 @@ remote_html = """
                     <label>Cor secundária:</label>
                     <input type="color" id="team1-color2" value="#FFFFFF">
                 </div>
-                <button onclick="saveTeam(1)"><img class="icon" src="/common/icons/save.svg" alt=""> Salvar</button>
-
-                <button onclick="addCard(1, 'yellow')" style="background: #FFD700; color: black;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Amarelo</button>
-                <button onclick="addCard(1, 'red')" style="background: #FF0000;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Vermelho</button>
+                <div style="margin-top:8px; display:flex; gap:8px;">
+                    <button onclick="addCard(1, 'yellow')" style="background: #FFD700; color: black;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Amarelo</button>
+                    <button onclick="addCard(1, 'red')" style="background: #FF0000;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Vermelho</button>
+                </div>
             </div>
-            
+
             <div class="team">
                 <h2>Time 2</h2>
-                
                 <div class="flex-row">
                     <label>Nome (3 letras):</label>
                     <input type="text" id="team2-name" maxlength="3" value="">
 
                     <label>Placar:</label>
-                    <input type="number" id="team2-score" value="0">
+                    <input type="number" id="team2-score" value="0" style="width:70px;">
+                    <button onclick="changeScore(2,-1)" title="Diminuir" style="margin-left:6px;"><img class="icon" src="/common/icons/minus.svg" alt="-"></button>
+                    <button onclick="changeScore(2,1)" title="Aumentar" style="margin-left:4px;"><img class="icon" src="/common/icons/plus.svg" alt="+"></button>
                 </div>
                 <div class="flex-row">
                     <label>Cor primária:</label>
@@ -535,24 +536,29 @@ remote_html = """
                     <label>Cor secundária:</label>
                     <input type="color" id="team2-color2" value="#FFFFFF">
                 </div>
-                <button onclick="saveTeam(2)"><img class="icon" src="/common/icons/save.svg" alt=""> Salvar</button>
+                <div style="margin-top:8px; display:flex; gap:8px;">
+                    <button onclick="addCard(2, 'yellow')" style="background: #FFD700; color: black;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Amarelo</button>
+                    <button onclick="addCard(2, 'red')" style="background: #FF0000;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Vermelho</button>
+                </div>
+            </div>
 
-                <button onclick="addCard(2, 'yellow')" style="background: #FFD700; color: black;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Amarelo</button>
-                <button onclick="addCard(2, 'red')" style="background: #FF0000;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Vermelho</button>
-            </div>
-        </div>
-        
-        <div class="section">
-            <h2>Controles do Relógio</h2>
-            <div class="button-group">
-                <button onclick="startClock()"><img class="icon" src="/common/icons/play.svg" alt=""> Iniciar</button>
-                <button onclick="stopClock()"><img class="icon" src="/common/icons/pause.svg" alt=""> Pausar</button>
-                <button onclick="resetClock()"><img class="icon" src="/common/icons/refresh.svg" alt=""> Resetar</button>
-            </div>
-            <label>Adicionar/Subtrair Minutos:</label>
-            <div class="button-group">
-                <input type="number" id="minutes" value="1" style="flex: 1;">
-                <button onclick="addTime()">Adicionar Tempo</button>
+            <div class="clock-panel">
+                <h2>Controles do Relógio</h2>
+                <div class="button-group">
+                    <button onclick="startClock()"><img class="icon" src="/common/icons/play.svg" alt=""> Iniciar</button>
+                    <button onclick="stopClock()"><img class="icon" src="/common/icons/pause.svg" alt=""> Pausar</button>
+                    <button onclick="resetClock()"><img class="icon" src="/common/icons/refresh.svg" alt=""> Resetar</button>
+                </div>
+                <div id="remote-clock-display" style="font-size:22px; text-align:center; margin-top:10px;">00:00</div>
+                <div id="remote-clock-status" style="text-align:center; font-size:12px; margin-top:6px; color:#ddd;">Parado</div>
+                <label style="margin-top:8px; display:block;">Modificar Tempo (MM:SS):</label>
+                <div class="button-group">
+                    <input type="text" id="minutes" placeholder="MM:SS" value="01:00" style="flex: 1;" inputmode="numeric" pattern="[0-9:]+">
+                    <button onclick="addTime()"><img class="icon" src="/common/icons/clock.svg" alt=""> Modificar Tempo</button>
+                </div>
+                <div style="text-align:center; margin-top:12px;">
+                    <button onclick="saveAll()"><img class="icon" src="/common/icons/save.svg" alt=""> Salvar Tudo</button>
+                </div>
             </div>
         </div>
         
@@ -584,6 +590,9 @@ remote_html = """
             }
         }
 
+        // Track recent local changes to avoid WebSocket overwriting them
+        let lastLocalChangeTime = {};
+
         // Salva nome, placar e cores com um único botão
         function saveTeam(team) {
             const name = document.getElementById(`team${team}-name`).value.toUpperCase();
@@ -599,9 +608,65 @@ remote_html = """
                 if (r.status !== 'ok') console.warn('set_colors failed', r);
                 try { const st = await fetch('/common/state.json').then(r => r.json()); applyStateToForm(st); } catch(e){}
             })();
-        }
+            }
 
-        function addCard(team, card) {
+            // Save all teams + period in one action
+            async function saveAll() {
+                const t1name = document.getElementById('team1-name').value.toUpperCase().trim();
+                const t2name = document.getElementById('team2-name').value.toUpperCase().trim();
+                const t1score = parseInt(document.getElementById('team1-score').value) || 0;
+                const t2score = parseInt(document.getElementById('team2-score').value) || 0;
+                const t1c1 = document.getElementById('team1-color1').value;
+                const t1c2 = document.getElementById('team1-color2').value;
+                const t2c1 = document.getElementById('team2-color1').value;
+                const t2c2 = document.getElementById('team2-color2').value;
+                const round = parseInt(document.getElementById('round').value) || 1;
+
+                const nameRe = /^[A-Z]{3}$/;
+                if (!nameRe.test(t1name) || !nameRe.test(t2name)) {
+                    alert('Os nomes devem conter 3 letras (A-Z) para cada time.');
+                    return;
+                }
+
+                let r;
+                r = await sendCommand({ action: 'set_name', team: 1, name: t1name });
+                if (r.status !== 'ok') console.warn('set_name 1 failed', r);
+                r = await sendCommand({ action: 'set_score', team: 1, score: t1score });
+                if (r.status !== 'ok') console.warn('set_score 1 failed', r);
+                r = await sendCommand({ action: 'set_colors', team: 1, colors: [t1c1, t1c2] });
+                if (r.status !== 'ok') console.warn('set_colors 1 failed', r);
+
+                r = await sendCommand({ action: 'set_name', team: 2, name: t2name });
+                if (r.status !== 'ok') console.warn('set_name 2 failed', r);
+                r = await sendCommand({ action: 'set_score', team: 2, score: t2score });
+                if (r.status !== 'ok') console.warn('set_score 2 failed', r);
+                r = await sendCommand({ action: 'set_colors', team: 2, colors: [t2c1, t2c2] });
+                if (r.status !== 'ok') console.warn('set_colors 2 failed', r);
+
+                r = await sendCommand({ action: 'set_round', round });
+                if (r.status !== 'ok') console.warn('set_round failed', r);
+
+                try { const st = await fetch('/common/state.json').then(r=>r.json()); applyStateToForm(st); } catch(e){}
+                alert('Salvo');
+            }
+
+            // Change score by delta (+1 / -1) for a team
+            async function changeScore(team, delta) {
+                const input = document.getElementById(`team${team}-score`);
+                if (!input) return;
+                let val = parseInt(input.value) || 0;
+                val = val + delta;
+                if (val < 0) val = 0;
+                input.value = val;
+                lastLocalChangeTime[`team${team}-score`] = Date.now();
+                const r = await sendCommand({ action: 'set_score', team, score: val });
+                if (r.status !== 'ok') {
+                    console.warn('set_score failed', r);
+                    alert('Falha ao atualizar placar');
+                }
+            }
+
+            function addCard(team, card) {
             sendCommand({ action: 'card', team, card });
         }
 
@@ -609,7 +674,27 @@ remote_html = """
         function stopClock() { sendCommand({ action: 'stop_clock' }); }
         function resetClock() { sendCommand({ action: 'reset_clock' }); }
         function addTime() {
-            const minutes = parseFloat(document.getElementById('minutes').value);
+            let v = document.getElementById('minutes').value.trim();
+            if (!v) return;
+            let minutes;
+            // Support MM:SS format or plain minutes (can be negative)
+            try {
+                const neg = v.startsWith('-');
+                if (neg) v = v.substring(1);
+                if (v.includes(':')) {
+                    const parts = v.split(':');
+                    const mm = parseInt(parts[0], 10) || 0;
+                    const ss = parseInt(parts[1], 10) || 0;
+                    minutes = mm + ss / 60;
+                } else {
+                    minutes = parseFloat(v);
+                }
+                if (neg) minutes = -minutes;
+            } catch (e) {
+                alert('Formato de tempo inválido. Use MM:SS ou minutos (ex: 1.5)');
+                return;
+            }
+            if (isNaN(minutes)) { alert('Formato de tempo inválido'); return; }
             sendCommand({ action: 'add_time', minutes });
         }
         function saveRound() {
@@ -622,9 +707,14 @@ remote_html = """
                 const teams = st.teams || st;
                 const t1 = teams[1] || teams['1'];
                 const t2 = teams[2] || teams['2'];
+                const now = Date.now();
                 if (t1) {
                     document.getElementById('team1-name').value = t1.name || '';
-                    document.getElementById('team1-score').value = t1.score || 0;
+                    // Only update score if it hasn't been changed locally in the last 500ms
+                    const scoreFieldId1 = 'team1-score';
+                    if (!lastLocalChangeTime[scoreFieldId1] || (now - lastLocalChangeTime[scoreFieldId1]) > 500) {
+                        document.getElementById(scoreFieldId1).value = t1.score || 0;
+                    }
                     if (t1.colors && t1.colors.length>=2) {
                         document.getElementById('team1-color1').value = t1.colors[0];
                         document.getElementById('team1-color2').value = t1.colors[1];
@@ -632,7 +722,11 @@ remote_html = """
                 }
                 if (t2) {
                     document.getElementById('team2-name').value = t2.name || '';
-                    document.getElementById('team2-score').value = t2.score || 0;
+                    // Only update score if it hasn't been changed locally in the last 500ms
+                    const scoreFieldId2 = 'team2-score';
+                    if (!lastLocalChangeTime[scoreFieldId2] || (now - lastLocalChangeTime[scoreFieldId2]) > 500) {
+                        document.getElementById(scoreFieldId2).value = t2.score || 0;
+                    }
                     if (t2.colors && t2.colors.length>=2) {
                         document.getElementById('team2-color1').value = t2.colors[0];
                         document.getElementById('team2-color2').value = t2.colors[1];
@@ -650,6 +744,29 @@ remote_html = """
                 applyStateToForm(st);
             } catch (e) { console.warn('failed to load state.json', e); }
         });
+
+        // Open websocket to receive live state updates (for clock display and round)
+        try {
+            const wsRemote = new WebSocket((location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host + '/ws');
+            wsRemote.onmessage = (event) => {
+                try {
+                    const st = JSON.parse(event.data);
+                    // update clock display
+                    const elapsed = st.clock && st.clock.elapsed_seconds ? st.clock.elapsed_seconds : 0;
+                    const mins = Math.floor(elapsed / 60);
+                    const secs = elapsed % 60;
+                    const clockEl = document.getElementById('remote-clock-display');
+                    if (clockEl) clockEl.textContent = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+                    const statusEl = document.getElementById('remote-clock-status');
+                    if (statusEl) statusEl.textContent = (st.clock && st.clock.running) ? 'Em execução' : 'Parado';
+                    // update round selector if present
+                    if (st.round) {
+                        const roundSel = document.getElementById('round');
+                        if (roundSel) roundSel.value = st.round;
+                    }
+                } catch (e) { console.warn('ws parse error', e); }
+            };
+        } catch (e) { console.warn('WebSocket not available', e); }
     </script>
 </body>
 </html>
