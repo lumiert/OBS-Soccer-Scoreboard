@@ -2,6 +2,9 @@ body {
   background: #2c2e38;
   color: white;
   font-family: Arial;
+  display: flex;
+  justify-content: center;
+  text-align: left;
 }
 
 .container {
@@ -46,6 +49,7 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 
 .team-section {

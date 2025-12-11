@@ -43,9 +43,9 @@ def _normalize_persistent(p):
         normalized[ik] = v
     # Provide defaults if missing
     if 1 not in normalized:
-        normalized[1] = {"name": "INT", "score": 0, "colors": ["#FF0000", "#FFFFFF"]}
+        normalized[1] = {"fullname": "AAABBBCCC", "name": "AAA", "score": 0, "colors": ["#000000", "#FFFFFF"]}
     if 2 not in normalized:
-        normalized[2] = {"name": "GRE", "score": 0, "colors": ["#006EFF", "#FFFFFF"]}
+        normalized[2] = {"fullname": "AAABBBCCC", "name": "BBB", "score": 0, "colors": ["#000000", "#FFFFFF"]}
     return {
         "teams": normalized,
         "events": p.get("events", []) or [],
@@ -63,8 +63,8 @@ async def _read_persistent_state():
     raw = await loop.run_in_executor(None, _read)
     if raw is None:
         # create default
-        default = {"teams": {"1": {"name": "INT", "score": 0, "colors": ["#FF0000", "#FFFFFF"]},
-                             "2": {"name": "GRE", "score": 0, "colors": ["#006EFF", "#FFFFFF"]}},
+        default = {"teams": {"1": {"fullname": "AAABBBCCC","name": "AAA", "score": 0, "colors": ["#000000", "#FFFFFF"]},
+                             "2": {"fullname": "AAABBBCCC","name": "BBB", "score": 0, "colors": ["#000000", "#FFFFFF"]}},
                    "events": [], "round": 1}
         await _write_persistent_state(default)
         raw = default
@@ -120,12 +120,28 @@ async def set_score(team, score):
     if not isinstance(score, int):
         return False, "score must be integer"
     if score < 0:
-        return False, "score must be higher than zero"
+        return False, "score must be >= 0"
     async with file_lock:
         p = await _read_persistent_state()
         p["teams"][team]["score"] = score
         await _write_persistent_state(p)
     return True, "score updated"
+
+async def set_fullname(team, fullname):
+    print("DEBUG fullname:", repr(fullname))
+
+    if team not in (1, 2):
+        return False, "invalid team"
+    if not isinstance(fullname, str):
+        return False, "full name must be string"
+    fullname = fullname.strip()
+    if len(fullname) == 0:
+        return False, "full name cannot be empty"
+    async with file_lock:
+        p = await _read_persistent_state()
+        p["teams"][team]["fullname"] = fullname
+        await _write_persistent_state(p)
+    return True, "full name updated"
 
 async def set_name(team, name):
     if team not in (1, 2):
@@ -362,35 +378,47 @@ async def process_command(cmd):
         score = cmd.get("score")
         ok, msg = await set_score(team, score)
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
+    
+    elif action == "set_fullname":
+        team = cmd.get("team")
+        fullname = cmd.get("fullname")
+        ok, msg = await set_fullname(team, fullname)
+        return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
+    
     elif action == "set_name":
         team = cmd.get("team")
         name = cmd.get("name")
         ok, msg = await set_name(team, name)
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
+    
     elif action == "set_colors":
         team = cmd.get("team")
         colors = cmd.get("colors")
         ok, msg = await set_colors(team, colors)
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
+    
     elif action == "card":
         team = cmd.get("team")
         card = cmd.get("card")
         ok, msg = await add_card(team, card)
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
+    
     elif action == "get_state":
         st = await get_state()
         return {"status":"ok","state":st}
 
-    # Clock actions
     elif action == "start_clock":
         ok, msg = await start_clock()
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
+    
     elif action == "stop_clock":
         ok, msg = await stop_clock()
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
+    
     elif action == "reset_clock":
         ok, msg = await reset_clock()
         return {"status":"ok","message":msg} if ok else {"status":"error","error":msg}
+    
     elif action == "add_time":
         # minutes: positive or negative integer/float (for syncing)
         minutes = cmd.get("minutes")
@@ -437,7 +465,7 @@ scoreboard_html = """
                     <div class="color-square" id="team1-color-a"></div>
                     <div class="color-square" id="team1-color-b"></div>
                 </div>
-                <div class="team-name" id="team1-name">INT</div>
+                <div class="team-name" id="team1-name">...</div>
                 <div class="score" id="team1-score">0</div>
         </div>
         <div class="team" id="team2">
@@ -445,15 +473,15 @@ scoreboard_html = """
                 <div class="color-square" id="team2-color-a"></div>
                 <div class="color-square" id="team2-color-b"></div>
             </div>
-            <div class="team-name" id="team2-name">GRE</div>
+            <div class="team-name" id="team2-name">...</div>
             <div class="score" id="team2-score">0</div>
         </div>
         <div class="third">
             <div class="round">
-                <div id="round-display"></div>
+                <div id="round-display">1ºT</div>
             </div>
             <div class="clock">
-                <div id="clock-display"></div>
+                <div id="clock-display">00:00</div>
             </div>
         </div>
     </div>
@@ -463,20 +491,22 @@ scoreboard_html = """
         ws.onmessage = (event) => {
             const state = JSON.parse(event.data);
             document.getElementById('team1-name').textContent = state.teams[1].name;
-                    document.getElementById('team1-score').textContent = state.teams[1].score;
-                    document.getElementById('team1-color-a').style.backgroundColor = state.teams[1].colors[0];
-                    document.getElementById('team1-color-b').style.backgroundColor = state.teams[1].colors[1];
-                document.getElementById('team2-name').textContent = state.teams[2].name;
+                document.getElementById('team1-fullname').textContent = state.teams[1].fullname;
+                document.getElementById('team1-score').textContent = state.teams[1].score;
+                document.getElementById('team1-color-a').style.backgroundColor = state.teams[1].colors[0];
+                document.getElementById('team1-color-b').style.backgroundColor = state.teams[1].colors[1];
+            document.getElementById('team2-name').textContent = state.teams[2].name;
+                document.getElementById('team1-fullname').textContent = state.teams[2].fullname;
                 document.getElementById('team2-score').textContent = state.teams[2].score;
-                    document.getElementById('team2-color-a').style.backgroundColor = state.teams[2].colors[0];
-                    document.getElementById('team2-color-b').style.backgroundColor = state.teams[2].colors[1];
+                document.getElementById('team2-color-a').style.backgroundColor = state.teams[2].colors[0];
+                document.getElementById('team2-color-b').style.backgroundColor = state.teams[2].colors[1];
             const elapsed = state.clock.elapsed_seconds;
             const mins = Math.floor(elapsed / 60);
             const secs = elapsed % 60;
             document.getElementById('clock-display').textContent = 
                 String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
             const roundNum = state.round || 1;
-            document.getElementById('round-display').textContent = `${roundNum}º`;
+            document.getElementById('round-display').textContent = `${roundNum}ºT`;
         };
     </script>
 </body>
@@ -498,11 +528,15 @@ remote_html = """
             <div class="team">
                 <h2>Time 1</h2>
                 <div class="flex-row">
+                    <label>Nome Completo:</label>
+                    <input type="text" id="team1-fullname" placeholder="ex.: GRÊMIO, Grêmio" style="width: 100%;">
+                </div>  
+                <div class="flex-row">
                     <label>Nome (3 letras):</label>
-                    <input type="text" id="team1-name" maxlength="3" value="">
+                    <input type="text" id="team1-name" maxlength="3" placeholder="ABC">
 
                     <label>Placar:</label>
-                    <input type="number" id="team1-score" value="0" style="width:70px;">
+                    <input type="number" id="team1-score" placeholder="0" value="0" style="width:70px;">
                     <button onclick="changeScore(1,-1)" title="Diminuir" style="margin-left:6px;"><img class="icon" src="/common/icons/minus.svg" alt="-"></button>
                     <button onclick="changeScore(1,1)" title="Aumentar" style="margin-left:4px;"><img class="icon" src="/common/icons/plus.svg" alt="+"></button>
                 </div>
@@ -514,19 +548,23 @@ remote_html = """
                     <input type="color" id="team1-color2" value="#FFFFFF">
                 </div>
                 <div style="margin-top:8px; display:flex; gap:8px;">
-                    <button onclick="addCard(1, 'yellow')" style="background: #FFD700; color: black;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Amarelo</button>
-                    <button onclick="addCard(1, 'red')" style="background: #FF0000;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Vermelho</button>
+                    <button onclick="addCard(1, 'yellow')" style="background: #FFD700; width: 100%; color: black;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Amarelo</button>
+                    <button onclick="addCard(1, 'red')" style="background: #FF0000; width: 100%;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Vermelho</button>
                 </div>
             </div>
 
             <div class="team">
                 <h2>Time 2</h2>
                 <div class="flex-row">
+                    <label>Nome Completo:</label>
+                    <input type="text" id="team2-fullname" placeholder="ex.: GRÊMIO, Grêmio" value="" style="width: 100%;">
+                </div>
+                <div class="flex-row">
                     <label>Nome (3 letras):</label>
-                    <input type="text" id="team2-name" maxlength="3" value="">
+                    <input type="text" id="team2-name" maxlength="3" placeholder="ABC" value="">
 
                     <label>Placar:</label>
-                    <input type="number" id="team2-score" value="0" style="width:70px;">
+                    <input type="number" id="team2-score" placeholder="0" value="0" style="width:70px;">
                     <button onclick="changeScore(2,-1)" title="Diminuir" style="margin-left:6px;"><img class="icon" src="/common/icons/minus.svg" alt="-"></button>
                     <button onclick="changeScore(2,1)" title="Aumentar" style="margin-left:4px;"><img class="icon" src="/common/icons/plus.svg" alt="+"></button>
                 </div>
@@ -537,13 +575,13 @@ remote_html = """
                     <input type="color" id="team2-color2" value="#FFFFFF">
                 </div>
                 <div style="margin-top:8px; display:flex; gap:8px;">
-                    <button onclick="addCard(2, 'yellow')" style="background: #FFD700; color: black;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Amarelo</button>
-                    <button onclick="addCard(2, 'red')" style="background: #FF0000;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Vermelho</button>
+                    <button onclick="addCard(2, 'yellow')" style="background: #FFD700; width: 100%; color: black;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Amarelo</button>
+                    <button onclick="addCard(2, 'red')" style="background: #FF0000; width: 100%;"><img class="icon" src="/common/icons/alert.svg" alt=""> Cartão Vermelho</button>
                 </div>
             </div>
 
             <div class="clock-panel">
-                <h2>Controles do Relógio</h2>
+                <h2>Cronômetro</h2>
                 <div class="button-group">
                     <button onclick="startClock()"><img class="icon" src="/common/icons/play.svg" alt=""> Iniciar</button>
                     <button onclick="stopClock()"><img class="icon" src="/common/icons/pause.svg" alt=""> Pausar</button>
@@ -566,8 +604,8 @@ remote_html = """
             <h2>Período</h2>
             <label>Selecionar Tempo:</label>
             <select id="round">
-                <option value="1">1º Tempo</option>
-                <option value="2">2º Tempo</option>
+                <option value="1">1º</option>
+                <option value="2">2º</option>
             </select>
             <button onclick="saveRound()"><img class="icon" src="/common/icons/save.svg" alt=""> Salvar</button>
         </div>
@@ -595,11 +633,15 @@ remote_html = """
 
         // Salva nome, placar e cores com um único botão
         function saveTeam(team) {
+            const fullname = document.getElementById(`team${team}-fullname`).value.trim();
             const name = document.getElementById(`team${team}-name`).value.toUpperCase();
             const score = parseInt(document.getElementById(`team${team}-score`).value) || 0;
             const color1 = document.getElementById(`team${team}-color1`).value;
             const color2 = document.getElementById(`team${team}-color2`).value;
             (async () => {
+                let w = await sendCommand({ action: 'set_fullname', team, name: fullname });
+                if (w.status !== 'ok') console.warn('set_fullname full failed', r);
+
                 let r = await sendCommand({ action: 'set_name', team, name });
                 if (r.status !== 'ok') console.warn('set_name failed', r);
                 r = await sendCommand({ action: 'set_score', team, score });
@@ -612,6 +654,8 @@ remote_html = """
 
             // Save all teams + period in one action
             async function saveAll() {
+                const t1fullname = document.getElementById('team1-fullname').value.trim();
+                const t2fullname = document.getElementById('team2-fullname').value.trim();
                 const t1name = document.getElementById('team1-name').value.toUpperCase().trim();
                 const t2name = document.getElementById('team2-name').value.toUpperCase().trim();
                 const t1score = parseInt(document.getElementById('team1-score').value) || 0;
@@ -629,13 +673,17 @@ remote_html = """
                 }
 
                 let r;
+                r = await sendCommand({ action: 'set_fullname', team: 1, fullname: t1fullname });
+                if (r.status !== 'ok') console.warn('set_fullname full 1 failed', r);
                 r = await sendCommand({ action: 'set_name', team: 1, name: t1name });
                 if (r.status !== 'ok') console.warn('set_name 1 failed', r);
                 r = await sendCommand({ action: 'set_score', team: 1, score: t1score });
                 if (r.status !== 'ok') console.warn('set_score 1 failed', r);
                 r = await sendCommand({ action: 'set_colors', team: 1, colors: [t1c1, t1c2] });
                 if (r.status !== 'ok') console.warn('set_colors 1 failed', r);
-
+                
+                r = await sendCommand({ action: 'set_fullname', team: 2, fullname: t2fullname });
+                if (r.status !== 'ok') console.warn('set_fullname full 2 failed', r);
                 r = await sendCommand({ action: 'set_name', team: 2, name: t2name });
                 if (r.status !== 'ok') console.warn('set_name 2 failed', r);
                 r = await sendCommand({ action: 'set_score', team: 2, score: t2score });
@@ -673,6 +721,7 @@ remote_html = """
         function startClock() { sendCommand({ action: 'start_clock' }); }
         function stopClock() { sendCommand({ action: 'stop_clock' }); }
         function resetClock() { sendCommand({ action: 'reset_clock' }); }
+
         function addTime() {
             let v = document.getElementById('minutes').value.trim();
             if (!v) return;
@@ -710,6 +759,7 @@ remote_html = """
                 const now = Date.now();
                 if (t1) {
                     document.getElementById('team1-name').value = t1.name || '';
+                    document.getElementById('team1-fullname').value = t1.fullname || '';
                     // Only update score if it hasn't been changed locally in the last 500ms
                     const scoreFieldId1 = 'team1-score';
                     if (!lastLocalChangeTime[scoreFieldId1] || (now - lastLocalChangeTime[scoreFieldId1]) > 500) {
@@ -758,8 +808,13 @@ remote_html = """
                     const clockEl = document.getElementById('remote-clock-display');
                     if (clockEl) clockEl.textContent = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
                     const statusEl = document.getElementById('remote-clock-status');
-                    if (statusEl) statusEl.textContent = (st.clock && st.clock.running) ? 'Em execução' : 'Parado';
-                    // update round selector if present
+                    if (statusEl) {
+                        const running = st.clock && st.clock.running;
+
+                        statusEl.textContent = running ? 'Em execução' : 'Parado';
+                        statusEl.style.color = running ? 'red' : '#ddd';
+                    }
+
                     if (st.round) {
                         const roundSel = document.getElementById('round');
                         if (roundSel) roundSel.value = st.round;

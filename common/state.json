@@ -1,41 +1,24 @@
 {
   "teams": {
     "1": {
-      "name": "INT",
-      "score": 2,
+      "fullname": "A",
+      "name": "AAA",
+      "score": 0,
       "colors": [
-        "#FF0000",
+        "#000000",
         "#FFFFFF"
       ]
     },
     "2": {
-      "name": "GRE",
+      "fullname": "A",
+      "name": "BBB",
       "score": 0,
       "colors": [
-        "#006EFF",
+        "#000000",
         "#FFFFFF"
       ]
     }
   },
-  "events": [
-    {
-      "type": "card",
-      "team": 1,
-      "card": "yellow",
-      "when": "2025-12-09T20:56:42.871529Z"
-    },
-    {
-      "type": "card",
-      "team": 1,
-      "card": "yellow",
-      "when": "2025-12-03T20:20:41.330786Z"
-    },
-    {
-      "type": "card",
-      "team": 1,
-      "card": "yellow",
-      "when": "2025-12-03T20:05:45.530265Z"
-    }
-  ],
+  "events": [],
   "round": 1
 }
